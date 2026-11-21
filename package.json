@@ -1,0 +1,17 @@
+{
+  "name": "cardiowave-dsp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zero-dependency 12-lead ECG, Pan-Tompkins QRS, HRV and WFDB DSP workbench",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node -e \"console.log('Open index.html in a browser, or serve this folder with any static file server.')\""
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

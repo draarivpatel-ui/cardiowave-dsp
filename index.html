@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="CardioWave DSP: a zero-dependency 12-lead ECG synthesis, QRS detection, HRV and WFDB export workbench for education and research.">
+<meta name="color-scheme" content="dark light">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Permissions-Policy" content="geolocation=(), camera=(), microphone=(), payment=(), usb=()">
+<title>CardioWave DSP | 12-Lead ECG Workbench</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 24" width="48" height="24"><polyline points="0,12 8,12 11,12 14,3 18,21 22,12 30,12 33,8 36,16 39,12 48,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+    <div class="brand-text">
+      <h1>CardioWave DSP</h1>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span class="pill pill-accent">v1.0.0</span>
+    <span class="pill">zero dependencies</span>
+    <span class="pill">deterministic</span>
+  </div>
+</header>
+
+<div class="disclaimer" role="note" aria-label="Educational and research disclaimer">
+  <strong>Education and research only.</strong> This workbench generates synthetic signals and is not a medical device. It must not be used for diagnosis, treatment, monitoring, or any clinical decision. No real patient data is used or stored.
+</div>
+
+<nav class="tabs" role="tablist" aria-label="Workbench sections">
+  <button type="button" role="tab" id="tab-workbench" aria-controls="panel-workbench" aria-selected="true" tabindex="0" class="tab">Workbench</button>
+  <button type="button" role="tab" id="tab-signal" aria-controls="panel-signal" aria-selected="false" tabindex="-1" class="tab">Signal &amp; leads</button>
+  <button type="button" role="tab" id="tab-hrv" aria-controls="panel-hrv" aria-selected="false" tabindex="-1" class="tab">HRV analysis</button>
+  <button type="button" role="tab" id="tab-eval" aria-controls="panel-eval" aria-selected="false" tabindex="-1" class="tab">Evaluation</button>
+  <button type="button" role="tab" id="tab-export" aria-controls="panel-export" aria-selected="false" tabindex="-1" class="tab">WFDB export</button>
+  <button type="button" role="tab" id="tab-docs" aria-controls="panel-docs" aria-selected="false" tabindex="-1" class="tab">Docs</button>
+</nav>
+
+<main id="main" tabindex="-1">
+
+<!-- ============================= WORKBENCH ============================= -->
+<section id="panel-workbench" role="tabpanel" aria-labelledby="tab-workbench" class="panel active">
+  <div class="panel-intro">
+    <h2>Signal generator</h2>
+    <p>Build a deterministic 12-lead record from the McSharry dynamical model. Every setting is seeded, so the same parameters always produce the same samples.</p>
+  </div>
+
+  <div class="controls" aria-label="Generator controls">
+    <div class="control-group">
+      <h3>Record</h3>
+      <label for="preset">Preset</label>
+      <select id="preset">
+        <option value="clinical">Clinical 12-lead, 72 bpm</option>
+        <option value="tachy">Tachycardia, 128 bpm</option>
+        <option value="brady">Bradycardia, 48 bpm</option>
+        <option value="noisy">Heavy artefact stress test</option>
+        <option value="clean">Clean research reference</option>
+        <option value="hrv">High HRV and RSA</option>
+      </select>
+      <label for="duration">Duration <output id="duration-out" for="duration">20 s</output></label>
+      <input type="range" id="duration" min="6" max="30" step="1" value="20">
+      <label for="samplingRate">Sampling rate <output id="samplingRate-out" for="samplingRate">250 Hz</output></label>
+      <input type="range" id="samplingRate" min="100" max="500" step="50" value="250">
+      <label for="heartRate">Mean heart rate <output id="heartRate-out" for="heartRate">72 bpm</output></label>
+      <input type="range" id="heartRate" min="35" max="180" step="1" value="72">
+      <label for="seed">Seed <output id="seed-out" for="seed">42</output></label>
+      <input type="range" id="seed" min="1" max="200" step="1" value="42">
+    </div>
+    <div class="control-group">
+      <h3>Physiology</h3>
+      <label for="hrStd">Beat jitter <output id="hrStd-out" for="hrStd">1.0</output></label>
+      <input type="range" id="hrStd" min="0" max="6" step="0.5" value="1">
+      <label for="rsaAmplitude">RSA amplitude <output id="rsaAmplitude-out" for="rsaAmplitude">40 ms</output></label>
+      <input type="range" id="rsaAmplitude" min="0" max="150" step="5" value="40">
+      <label for="mayerAmplitude">Mayer wave <output id="mayerAmplitude-out" for="mayerAmplitude">15 ms</output></label>
+      <input type="range" id="mayerAmplitude" min="0" max="120" step="5" value="15">
+      <label for="respRate">Respiration <output id="respRate-out" for="respRate">15 /min</output></label>
+      <input type="range" id="respRate" min="6" max="30" step="1" value="15">
+    </div>
+    <div class="control-group">
+      <h3>Artefacts</h3>
+      <label for="humAmplitude">Mains hum (60 Hz) <output id="humAmplitude-out" for="humAmplitude">0.05 mV</output></label>
+      <input type="range" id="humAmplitude" min="0" max="0.4" step="0.01" value="0.05">
+      <label for="wanderAmplitude">Baseline wander <output id="wanderAmplitude-out" for="wanderAmplitude">0.10 mV</output></label>
+      <input type="range" id="wanderAmplitude" min="0" max="0.6" step="0.01" value="0.10">
+      <label for="emgAmplitude">EMG noise <output id="emgAmplitude-out" for="emgAmplitude">0.02 mV</output></label>
+      <input type="range" id="emgAmplitude" min="0" max="0.25" step="0.01" value="0.02">
+      <label for="emgBandwidth">EMG bandwidth <output id="emgBandwidth-out" for="emgBandwidth">40 Hz</output></label>
+      <input type="range" id="emgBandwidth" min="20" max="100" step="5" value="40">
+    </div>
+    <div class="control-group">
+      <h3>Detector</h3>
+      <label for="minVotes">Lead votes required <output id="minVotes-out" for="minVotes">4 of 12</output></label>
+      <input type="range" id="minVotes" min="1" max="12" step="1" value="4">
+      <label for="gate">Amplitude gate <output id="gate-out" for="gate">0.20</output></label>
+      <input type="range" id="gate" min="0" max="0.6" step="0.05" value="0.20">
+      <label for="toleranceMs">Cluster tolerance <output id="toleranceMs-out" for="toleranceMs">50 ms</output></label>
+      <input type="range" id="toleranceMs" min="20" max="120" step="5" value="50">
+      <label for="detectorMode">Detector mode</label>
+      <select id="detectorMode">
+        <option value="ensemble">12-lead voting ensemble</option>
+        <option value="single">Single lead II baseline</option>
+      </select>
+    </div>
+    <div class="control-actions">
+      <button type="button" id="run" class="btn btn-primary">Generate and analyse</button>
+      <button type="button" id="reset" class="btn">Reset defaults</button>
+      <p class="hint">Keyboard: <kbd>1</kbd> to <kbd>6</kbd> switch tabs, <kbd>R</kbd> regenerate, <kbd>Arrow</kbd> keys move sliders.</p>
+    </div>
+  </div>
+
+  <div id="status" class="status" role="status" aria-live="polite">Ready. Press Generate and analyse to build a record.</div>
+
+  <div class="stat-grid" id="stat-grid" aria-label="Run summary"></div>
+
+  <div class="card">
+    <div class="card-head">
+      <h3>Lead II with detected R peaks</h3>
+      <div class="legend" aria-hidden="true">
+        <span><i class="swatch swatch-signal"></i> signal</span>
+        <span><i class="swatch swatch-detect"></i> detected</span>
+        <span><i class="swatch swatch-truth"></i> ground truth</span>
+      </div>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="ecg-canvas" role="img" aria-label="Lead II ECG waveform with detected R peak markers and ground truth markers"></canvas>
+    </div>
+    <p class="caption" id="ecg-caption">Generated trace will appear after a run.</p>
+  </div>
+</section>
+
+<!-- ============================= SIGNAL ============================= -->
+<section id="panel-signal" role="tabpanel" aria-labelledby="tab-signal" class="panel" hidden>
+  <div class="panel-intro">
+    <h2>Signal and leads</h2>
+    <p>Compare the twelve projected leads, inspect the filter chain response, and see the Pan-Tompkins integration envelope.</p>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <h3>12-lead matrix</h3>
+      <label class="inline-label" for="lead-window">Window <select id="lead-window"><option value="4">4 s</option><option value="6" selected>6 s</option><option value="10">10 s</option></select></label>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="leads-canvas" role="img" aria-label="Small multiples of all twelve ECG leads"></canvas>
+    </div>
+    <p class="caption">Each row is auto-scaled. Inverted R waves in III and aVR are expected from the lead projection matrix.</p>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-head"><h3>Butterworth magnitude response</h3></div>
+      <div class="canvas-wrap"><canvas id="bode-canvas" role="img" aria-label="Magnitude response in decibels of the band-pass, notch and high-pass filters"></canvas></div>
+      <p class="caption">Zero-phase second-order-section cascade. The QRS band is 5 to 15 Hz, the notch rejects 60 Hz mains hum, and the high-pass removes baseline wander.</p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Pan-Tompkins stages (lead II)</h3></div>
+      <div class="canvas-wrap"><canvas id="stages-canvas" role="img" aria-label="Band-pass filtered signal, squared derivative, and moving-window integration envelope"></canvas></div>
+      <p class="caption">Differentiation accentuates QRS slopes, squaring emphasises large deflections, and the 120 ms integration window produces the detection envelope.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= HRV ============================= -->
+<section id="panel-hrv" role="tabpanel" aria-labelledby="tab-hrv" class="panel" hidden>
+  <div class="panel-intro">
+    <h2>Heart-rate variability</h2>
+    <p>Time-domain, Poincare and frequency-domain metrics computed from the detected beat positions.</p>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Metric report</h3><span id="hrv-source" class="pill">no run yet</span></div>
+    <div class="table-scroll"><table id="hrv-table" class="data-table">
+      <caption class="sr-only">HRV metrics with values, units and interpretation</caption>
+      <thead><tr><th scope="col">Metric</th><th scope="col">Value</th><th scope="col">Unit</th><th scope="col">Meaning</th></tr></thead>
+      <tbody id="hrv-body"><tr><td colspan="4">Run the workbench to compute HRV.</td></tr></tbody>
+    </table></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-head"><h3>R-R interval tachogram</h3></div>
+      <div class="canvas-wrap"><canvas id="tacho-canvas" role="img" aria-label="RR interval series plotted against beat time"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Poincare plot</h3></div>
+      <div class="canvas-wrap"><canvas id="poincare-canvas" role="img" aria-label="Poincare scatter of RR n against RR n plus one"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Welch power spectral density</h3></div>
+    <div class="canvas-wrap"><canvas id="psd-canvas" role="img" aria-label="Power spectral density with LF and HF bands shaded"></canvas></div>
+    <p class="caption">LF band 0.04 to 0.15 Hz, HF band 0.15 to 0.40 Hz. Short synthetic records give coarse spectral resolution, so LF/HF values are illustrative only.</p>
+  </div>
+</section>
+
+<!-- ============================= EVALUATION ============================= -->
+<section id="panel-eval" role="tabpanel" aria-labelledby="tab-eval" class="panel" hidden>
+  <div class="panel-intro">
+    <h2>Evaluation and benchmark</h2>
+    <p>Quantitative scoring against the model ground truth, an explicit baseline comparison, and documented failure modes. All figures are computed live from the current seeded record.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h3>Live detection score</h3>
+      <button type="button" id="run-eval" class="btn btn-small">Re-run benchmark</button>
+    </div>
+    <p class="caption" id="eval-config">No run yet.</p>
+    <div class="table-scroll"><table class="data-table">
+      <caption class="sr-only">Detection scores for the baseline single lead detector and the ensemble detector</caption>
+      <thead><tr><th scope="col">Detector</th><th scope="col">Detections</th><th scope="col">TP</th><th scope="col">FP</th><th scope="col">FN</th><th scope="col">Sensitivity</th><th scope="col">Precision</th><th scope="col">F1</th><th scope="col">RMSE (ms)</th></tr></thead>
+      <tbody id="score-body"><tr><td colspan="9">Run the benchmark to populate scores.</td></tr></tbody>
+    </table></div>
+    <div class="canvas-wrap"><canvas id="score-canvas" role="img" aria-label="Bar chart comparing F1, sensitivity and precision of both detectors"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3>Quantitative benchmark suite</h3><button type="button" id="run-suite" class="btn btn-small">Run suite</button></div>
+    <p class="caption">Deterministic cases across seeds, heart rates, artefact levels and sampling rates. Each case reports true positives, false positives, false negatives and F1 for both detectors. <span id="suite-time"></span></p>
+    <div class="table-scroll"><table class="data-table">
+      <caption class="sr-only">Benchmark cases with per-detector scores</caption>
+      <thead><tr><th scope="col">Case</th><th scope="col">BPM</th><th scope="col">Fs</th><th scope="col">Noise</th><th scope="col">Ref beats</th><th scope="col">Base F1</th><th scope="col">Ens F1</th><th scope="col">Ens FPs</th><th scope="col">Ens FNs</th><th scope="col">Delta F1</th></tr></thead>
+      <tbody id="suite-body"><tr><td colspan="10">Press Run suite to execute nine deterministic cases.</td></tr></tbody>
+    </table></div>
+    <div id="suite-summary" class="stat-grid" aria-live="polite"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3>Filter verification</h3></div>
+    <div class="table-scroll"><table class="data-table">
+      <caption class="sr-only">Measured filter passband and stopband attenuation</caption>
+      <thead><tr><th scope="col">Filter</th><th scope="col">Probe</th><th scope="col">Measured</th><th scope="col">Expected</th><th scope="col">Result</th></tr></thead>
+      <tbody id="filter-body"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card failure-card">
+    <div class="card-head"><h3>Known failure modes and limitations</h3></div>
+    <ul class="failure-list">
+      <li><strong>T waves and tall P waves.</strong> A single-lead Pan-Tompkins pass can mistake large T waves for R peaks. The ensemble vote gate suppresses them but can also erase genuine low-amplitude beats.</li>
+      <li><strong>Extreme noise.</strong> High hum, wander and EMG amplitudes saturate the adaptive threshold. Precision falls before sensitivity does, visible in the noisy stress preset.</li>
+      <li><strong>Vote sensitivity.</strong> Requiring too many leads drops sensitivity sharply; requiring too few floods the output with false positives. The sweep below shows this trade-off on the current record.</li>
+      <li><strong>Short records.</strong> HRV frequency estimates need long, stationary R-R series. Records under a couple of minutes produce unstable LF/HF ratios and should not be interpreted physiologically.</li>
+      <li><strong>Synthetic ground truth.</strong> The reference R peaks come from the generator's own phase crossings. Scores measure agreement with the model, not clinical accuracy on real recordings.</li>
+      <li><strong>Model mismatch.</strong> The McSharry generator is a smooth ODE, not real electrophysiology. Arrhythmias, ectopic beats, electrode detachment and pacemaker spikes are not modelled.</li>
+      <li><strong>Not a medical device.</strong> Synthetic signals and detector outputs are for education and research only. Never use them for diagnosis, treatment, monitoring or clinical decisions.</li>
+    </ul>
+    <div class="canvas-wrap"><canvas id="sweep-canvas" role="img" aria-label="F1 score as the required lead vote count changes"></canvas></div>
+    <p class="caption">Vote-count sweep on the current record. A peak in the middle is the expected behaviour of a consensus detector.</p>
+  </div>
+</section>
+
+<!-- ============================= EXPORT ============================= -->
+<section id="panel-export" role="tabpanel" aria-labelledby="tab-export" class="panel" hidden>
+  <div class="panel-intro">
+    <h2>WFDB export</h2>
+    <p>Export the current record as PhysioNet WFDB compatible text: a <code>.hea</code> header, a CSV signal table and a <code>.qrs</code> annotation list. All files are generated locally in the browser.</p>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Record preview</h3><span id="export-state" class="pill">no record</span></div>
+    <div class="export-grid">
+      <div><label for="export-name">Record name</label><input type="text" id="export-name" value="cardiowave-synthetic" spellcheck="false" autocomplete="off"></div>
+      <div><label for="export-leads">Leads</label><select id="export-leads"><option value="12">All 12</option><option value="3">First 3</option><option value="1">Lead II only</option></select></div>
+      <div><label for="export-gain">ADC gain <output id="export-gain-out" for="export-gain">200</output></label><input type="range" id="export-gain" min="50" max="1000" step="50" value="200"></div>
+      <div><label for="export-ann">Annotations</label><select id="export-ann"><option value="detected">Detected peaks</option><option value="truth">Ground truth</option><option value="both">Both</option></select></div>
+    </div>
+    <div class="control-actions">
+      <button type="button" id="build-export" class="btn btn-primary">Build files</button>
+      <button type="button" id="download-header" class="btn" disabled>Download .hea</button>
+      <button type="button" id="download-signals" class="btn" disabled>Download .csv</button>
+      <button type="button" id="download-ann" class="btn" disabled>Download .qrs</button>
+    </div>
+    <pre id="export-preview" class="code-preview" aria-label="WFDB header preview" tabindex="0">Build files to see the header preview.</pre>
+  </div>
+</section>
+
+<!-- ============================= DOCS ============================= -->
+<section id="panel-docs" role="tabpanel" aria-labelledby="tab-docs" class="panel" hidden>
+  <div class="panel-intro">
+    <h2>Documentation</h2>
+    <p>How the engine works, what each module does, and how to run the verification suite.</p>
+  </div>
+  <div class="docs-grid">
+    <div class="card"><h3>Engine modules</h3>
+      <dl class="doc-list">
+        <dt><code>src/cardio.js</code></dt><dd>McSharry ODE 12-lead synthesis, lead projection matrix, seeded RR series, additive hum, wander and EMG artefacts, and physiological scaling.</dd>
+        <dt><code>src/filters.js</code></dt><dd>Analogue Butterworth prototype, low-pass to band-pass and band-stop transforms, bilinear transform, SOS pairing, causal filtering, zero-phase forward-backward filtering and magnitude response.</dd>
+        <dt><code>src/analysis.js</code></dt><dd>Notch and high-pass conditioning, Pan-Tompkins QRS detection, multi-lead voting ensemble, detection scoring, HRV time and frequency metrics, quadratic spline interpolation and Welch PSD.</dd>
+      </dl>
+    </div>
+    <div class="card"><h3>Signal pipeline</h3>
+      <ol class="doc-list ordered">
+        <li>Seeded RR intervals combine mean rate, Mayer wave, respiratory sinus arrhythmia and Gaussian jitter.</li>
+        <li>A fourth-order Runge-Kutta integrator advances 12 coupled oscillators at 4x the output sampling rate.</li>
+        <li>Each lead is projected through the lead matrix, rescaled to millivolts, and given an independent noise realisation.</li>
+        <li>The detector band-passes 5 to 15 Hz, differentiates, squares, integrates over 120 ms, then thresholds with adaptive signal and noise estimates.</li>
+        <li>The ensemble clusters detections across leads, gates weak clusters, and refines onto the spatial magnitude maximum.</li>
+        <li>HRV metrics are computed from detected R-R intervals with a 100 Hz interpolated Welch spectrum.</li>
+      </ol>
+    </div>
+    <div class="card"><h3>Run and test</h3>
+      <p>Open <code>index.html</code> directly in any modern browser. No build step, server, package install or network access is required. The three source modules are UMD wrappers, so they load as plain scripts in the browser and as CommonJS modules under Node.</p>
+      <pre class="code-preview" tabindex="0">npm test
+node --test test/*.test.js</pre>
+      <p>The suite covers filter design, SOS stability, zero-phase symmetry, generator determinism, ground-truth scoring, HRV invariants, spline and PSD maths, DOM structure, accessibility wiring and mobile layout constraints.</p>
+    </div>
+    <div class="card"><h3>Keyboard and accessibility</h3>
+      <ul class="doc-list">
+        <li>Tabs follow the WAI-ARIA tab pattern: <kbd>Left</kbd>/<kbd>Right</kbd> or <kbd>Home</kbd>/<kbd>End</kbd> to move, <kbd>Enter</kbd> or <kbd>Space</kbd> to activate.</li>
+        <li>Number keys <kbd>1</kbd> through <kbd>6</kbd> jump to a tab. <kbd>R</kbd> regenerates the record.</li>
+        <li>Every control has a visible label and a live output. Canvases carry text alternatives and the numeric results are also published as tables.</li>
+        <li>Plots use a colour-blind safe palette and never rely on colour alone: markers differ by shape and line style.</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Disclaimer</h3>
+      <p>CardioWave DSP is an educational and research tool built on synthetic data. It is not a medical device, is not validated against clinical recordings, and must not be used for diagnosis, treatment, monitoring, triage or any clinical decision. No personal or patient information is collected, transmitted or stored.</p>
+    </div>
+    <div class="card"><h3>Licence</h3><p>MIT. See <code>LICENSE</code>. The engine has no third-party runtime dependencies and no external asset requests.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <p>CardioWave DSP | synthetic signals only | not a medical device | MIT licensed | zero dependencies</p>
+</footer>
+
+<script src="src/filters.js"></script>
+<script src="src/cardio.js"></script>
+<script src="src/analysis.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
