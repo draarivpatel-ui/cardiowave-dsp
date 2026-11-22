@@ -4,6 +4,8 @@ A self-contained, zero-dependency engineering workbench for synthetic 12-lead EC
 
 > **Education and research only.** This project generates synthetic signals and is not a medical device. It must not be used for diagnosis, treatment, monitoring, triage, or any clinical decision. No real patient data is used or stored.
 
+**Live demo:** [https://aariv.me/cardiowave-dsp/](https://aariv.me/cardiowave-dsp/)
+
 ## Quick start
 
 Open `index.html` in any modern browser. There is no build step, no package install, no server, and no network request. Every script is a plain browser file and every source module is a UMD wrapper that also loads under Node.
