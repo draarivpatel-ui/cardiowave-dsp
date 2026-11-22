@@ -17,7 +17,9 @@
     return {
       Filters: resolve('CardioWaveFilters', './src/filters.js'),
       Cardio: resolve('CardioWave', './src/cardio.js'),
-      Analysis: resolve('CardioWaveAnalysis', './src/analysis.js')
+      Analysis: resolve('CardioWaveAnalysis', './src/analysis.js'),
+      Rhythm: resolve('CardioWaveRhythm', './src/rhythm.js'),
+      Report: resolve('CardioWaveReport', './src/report.js')
     };
   }
 
@@ -213,6 +215,106 @@
     return out;
   }
 
+  /* Build the three clinical export files for the current record: the
+     filtered-signal CSV, the fingerprinted JSON report and the printable
+     SVG strip. Everything is deterministic text. */
+  function clinicalFiles(record, evaluation, options) {
+    var E = engines();
+    var o = options || {};
+    var fs = record.samplingRate;
+    var leadIndex = Math.min(record.signals.length - 1,
+      Math.max(0, Math.round(safeNumber(o.leadIndex, 1))));
+    var seconds = Math.min(record.duration,
+      Math.max(1, safeNumber(o.seconds, record.duration)));
+    var n = Math.min(record.signals[0].length, Math.round(seconds * fs));
+    var name = (o.name || 'cardiowave-strip').replace(/[^A-Za-z0-9_-]/g, '-');
+
+    var filtered = E.Report.filteredLeads(record.signals, fs);
+    var stripSignal = filtered[leadIndex].subarray
+      ? filtered[leadIndex].subarray(0, n)
+      : Array.prototype.slice.call(filtered[leadIndex], 0, n);
+    var peaks = (evaluation ? evaluation.ensemble.peaks : record.rPeaks)
+      .filter(function (p) { return p < n; });
+
+    var hrvPeaks = evaluation ? evaluation.hrvPeaks : record.rPeaks;
+    var rhythm = E.Rhythm.classifyRhythm(E.Analysis.rrIntervals(hrvPeaks, fs));
+    var artifacts = E.Rhythm.analyzeArtifacts(record.signals[1], fs);
+    var h = evaluation ? evaluation.hrv : {};
+    var score = evaluation ? evaluation.ensembleScore : null;
+
+    var rep = E.Report.reportJson({
+      tool: 'CardioWave DSP ' + E.Cardio.VERSION,
+      record: {
+        name: name, duration: record.duration, samplingRate: fs,
+        leads: record.leadNames, seed: record.options.seed, options: record.options
+      },
+      detection: score ? {
+        detector: 'ensemble 12-lead vote',
+        beats: evaluation.ensemble.peaks.length,
+        referenceBeats: record.rPeaks.length,
+        truePositives: score.truePositives,
+        falsePositives: score.falsePositives,
+        falseNegatives: score.falseNegatives,
+        sensitivity: score.sensitivity,
+        precision: score.positivePredictivity,
+        f1: score.f1,
+        rmseMs: score.rmseMs
+      } : {},
+      hrv: {
+        meanNN: h.meanNN, sdnn: h.sdnn, rmssd: h.rmssd, pnn50: h.pnn50,
+        sd1: h.sd1, sd2: h.sd2, sd1sd2: h.sd1sd2,
+        lf: h.lf, hf: h.hf, lfHf: h.lfHf, totalPower: h.totalPower
+      },
+      rhythm: rhythm,
+      artifacts: artifacts,
+      strip: {
+        lead: record.leadNames[leadIndex], seconds: seconds,
+        mmPerSec: 25, mmPerMv: 10, markedBeats: peaks.length
+      }
+    });
+
+    var csv = E.Report.traceCsv(filtered, record.leadNames, fs, 5);
+    var svg = E.Report.ecgStripSvg(stripSignal, fs, peaks, {
+      lead: record.leadNames[leadIndex],
+      recordName: name,
+      fingerprint: rep.fingerprint
+    });
+    return {
+      csv: csv, json: rep.text, svg: svg,
+      fingerprint: rep.fingerprint, name: name,
+      lead: record.leadNames[leadIndex], seconds: seconds
+    };
+  }
+
+  /* Serialise the control state into the URL hash so a shared link
+     restores the full configuration. */
+  function hashEncode(cfg) {
+    return Object.keys(DEFAULTS).map(function (k) {
+      return encodeURIComponent(k) + '=' + encodeURIComponent(cfg[k]);
+    }).join('&');
+  }
+
+  /* Parse a hash string of the form '#key=value&key=value' back into a
+     plain object. Unknown keys are kept out of the returned cfg only at
+     apply time. */
+  function hashDecode(str) {
+    var out = {};
+    if (!str) return out;
+    var s = String(str).replace(/^#/, '');
+    var pairs = s.split('&');
+    for (var i = 0; i < pairs.length; i++) {
+      var kv = pairs[i].split('=');
+      if (kv.length === 2 && kv[0]) {
+        try {
+          out[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+        } catch (e) {
+          /* A malformed escape in one pair must not drop the rest. */
+        }
+      }
+    }
+    return out;
+  }
+
   /* ------------------------- canvas helpers ------------------------- */
 
   function setupCanvas(canvas, height) {
@@ -292,7 +394,10 @@
     filterVerification: filterVerification,
     voteSweep: voteSweep,
     dedupePeaks: dedupePeaks,
-    setupCanvas: setupCanvas
+    setupCanvas: setupCanvas,
+    clinicalFiles: clinicalFiles,
+    hashEncode: hashEncode,
+    hashDecode: hashDecode
   };
 
   if (typeof module === 'object' && module && module.exports) module.exports = api;
@@ -352,20 +457,24 @@
       minVotes: function (v) { return v + ' of 12'; },
       gate: function (v) { return fmt(v, 2); },
       toleranceMs: function (v) { return v + ' ms'; },
-      exportGain: function (v) { return String(v); }
+      exportGain: function (v) { return String(v); },
+      stripSeconds: function (v) { return v + ' s'; }
     };
+
+    /* Format keys whose element ids are not the key itself. */
+    var OUTPUT_SRC = { exportGain: 'export-gain', stripSeconds: 'strip-seconds' };
+    var OUTPUT_OUT = { exportGain: 'export-gain-out', stripSeconds: 'strip-seconds-out' };
 
     function syncOutputs() {
       Object.keys(OUTPUT_FORMATS).forEach(function (key) {
-        var src = key === 'exportGain' ? 'export-gain' : key;
-        var el = byId(src);
-        var out = byId(key === 'exportGain' ? 'export-gain-out' : key + '-out');
+        var el = byId(OUTPUT_SRC[key] || key);
+        var out = byId(OUTPUT_OUT[key] || (key + '-out'));
         if (el && out) text(out, OUTPUT_FORMATS[key](safeNumber(el.value, 0)));
       });
     }
 
-    function stats(items) {
-      var grid = byId('stat-grid');
+    function fillStats(gridId, items) {
+      var grid = byId(gridId);
       if (!grid) return;
       grid.textContent = '';
       items.forEach(function (item) {
@@ -377,6 +486,10 @@
         if (item.note) { var n = d.createElement('span'); n.className = 'stat-note'; n.textContent = item.note; box.appendChild(n); }
         grid.appendChild(box);
       });
+    }
+
+    function stats(items) {
+      fillStats('stat-grid', items);
     }
 
     function tableRows(id, rows) {
@@ -551,6 +664,62 @@
       label(c.ctx, fmt(n / (state.record ? state.record.samplingRate : 250), 1) + ' s', c.w - p.r, c.h - 8, 'right');
     }
 
+    /* Shared Poincare scatter: RR(n) on x, RR(n+1) on y, the identity
+       line, an optional SD1/SD2 ellipse and optional ectopy markers. */
+    function plotPoincare(c, rr, opts) {
+      var o = opts || {};
+      var p = frame(c.ctx, c.w, c.h, o.pad || { l: 46, r: 12, t: 14, b: 26 });
+      if (rr.length < 4) {
+        label(c.ctx, 'Need at least five beats for a Poincare plot.', p.l + 8, c.h / 2);
+        return null;
+      }
+      var lo = Math.min.apply(null, rr), hi = Math.max.apply(null, rr);
+      var pad = (hi - lo) * 0.06 || 10;
+      lo -= pad; hi += pad;
+      var sp = hi - lo;
+      var X = function (v) { return p.l + (c.w - p.l - p.r) * (v - lo) / sp; };
+      var Y = function (v) { return p.t + (c.h - p.t - p.b) * (1 - (v - lo) / sp); };
+      polyline(c.ctx, function (i) { return X(lo + sp * i / 40); },
+        function (i) { return Y(lo + sp * i / 40); }, 41, PALETTE.grid, 1, [4, 4]);
+
+      var ell = null;
+      if (o.ellipse) {
+        ell = E.Rhythm.poincareEllipse(rr);
+        if (ell.sd1 > 0 && ell.sd2 > 0) {
+          c.ctx.strokeStyle = PALETTE.purple;
+          c.ctx.lineWidth = 1.4;
+          if (c.ctx.setLineDash) c.ctx.setLineDash([6, 4]);
+          c.ctx.beginPath();
+          for (var t = 0; t <= 64; t++) {
+            var a = t / 64 * 2 * Math.PI;
+            var ex = ell.cx + ell.sd2 * Math.cos(a) * ell.u2x + ell.sd1 * Math.sin(a) * ell.u1x;
+            var ey = ell.cy + ell.sd2 * Math.cos(a) * ell.u2y + ell.sd1 * Math.sin(a) * ell.u1y;
+            if (t === 0) c.ctx.moveTo(X(ex), Y(ey)); else c.ctx.lineTo(X(ex), Y(ey));
+          }
+          c.ctx.stroke();
+          if (c.ctx.setLineDash) c.ctx.setLineDash([]);
+          c.ctx.fillStyle = PALETTE.purple;
+          c.ctx.beginPath(); c.ctx.arc(X(ell.cx), Y(ell.cy), 3.4, 0, Math.PI * 2); c.ctx.fill();
+        }
+      }
+
+      var ectopySet = {};
+      if (o.ectopy) {
+        E.Rhythm.ectopyIndices(rr).forEach(function (i) { ectopySet[i] = true; });
+      }
+      for (var i = 0; i + 1 < rr.length; i++) {
+        var isEctopic = ectopySet[i] || ectopySet[i - 1];
+        c.ctx.fillStyle = isEctopic ? PALETTE.danger : PALETTE.accent;
+        c.ctx.beginPath();
+        c.ctx.arc(X(rr[i]), Y(rr[i + 1]), isEctopic ? 4.4 : 3, 0, Math.PI * 2);
+        c.ctx.fill();
+      }
+      label(c.ctx, 'RR(n) ms', c.w - p.r, c.h - 8, 'right');
+      label(c.ctx, 'RR(n+1)', 4, p.t + 8);
+      label(c.ctx, fmt(lo, 0), p.l, c.h - 8);
+      return ell;
+    }
+
     function drawHRV() {
       var ev = state.evaluation;
       var tc = setupCanvas(byId('tacho-canvas'), 220);
@@ -567,22 +736,7 @@
         label(tc.ctx, 'beat index', tc.w - p.r, tc.h - 8, 'right');
       }
       var pc = setupCanvas(byId('poincare-canvas'), 220);
-      if (pc) {
-        var p2 = frame(pc.ctx, pc.w, pc.h, { l: 46, r: 12, t: 14, b: 26 });
-        var r = ev ? ev.hrv.rri : [];
-        if (r.length > 2) {
-          var lo = Math.min.apply(null, r), hi = Math.max.apply(null, r), sp = hi - lo || 1;
-          var X = function (v) { return p2.l + (pc.w - p2.l - p2.r) * (v - lo) / sp; };
-          var Y = function (v) { return p2.t + (pc.h - p2.t - p2.b) * (1 - (v - lo) / sp); };
-          polyline(pc.ctx, function (i) { return X(lo + sp * i / 40); }, function (i) { return Y(lo + sp * i / 40); }, 41, PALETTE.grid, 1, [4, 4]);
-          for (var i = 0; i + 1 < r.length; i++) {
-            pc.ctx.fillStyle = PALETTE.accent;
-            pc.ctx.beginPath(); pc.ctx.arc(X(r[i]), Y(r[i + 1]), 3, 0, Math.PI * 2); pc.ctx.fill();
-          }
-          label(pc.ctx, 'RR(n) ms', pc.w - p2.r, pc.h - 8, 'right');
-          label(pc.ctx, 'RR(n+1)', 4, p2.t + 8);
-        } else label(pc.ctx, 'Need at least four detected beats.', p2.l + 8, pc.h / 2);
-      }
+      if (pc) plotPoincare(pc, ev ? ev.hrv.rri : [], { ellipse: true, ectopy: false });
       var sc = setupCanvas(byId('psd-canvas'), 200);
       if (sc) {
         var p3 = frame(sc.ctx, sc.w, sc.h, { l: 48, r: 12, t: 14, b: 26 });
@@ -737,6 +891,119 @@
       drawHRV();
     }
 
+    /* --- rhythm classification card (workbench) --- */
+
+    function isChecked(id, fallback) {
+      var el = byId(id);
+      if (!el) return fallback;
+      return el.checked === undefined ? fallback : !!el.checked;
+    }
+
+    function renderRhythm() {
+      var ev = state.evaluation;
+      if (!ev || !state.record) return;
+      var fs = state.record.samplingRate;
+      var rr = E.Analysis.rrIntervals(ev.hrvPeaks, fs);
+      var rhythm = E.Rhythm.classifyRhythm(rr);
+      var artifacts = E.Rhythm.analyzeArtifacts(state.record.signals[1], fs);
+      state.rhythm = rhythm;
+      state.artifacts = artifacts;
+
+      var labelEl = byId('rhythm-label');
+      text(labelEl, rhythm.label);
+      if (labelEl && labelEl.className !== undefined) {
+        labelEl.className = 'pill ' + (rhythm.key === 'normal' ? 'pill-good' :
+          (rhythm.key === 'insufficient' ? '' : 'pill-warn'));
+      }
+
+      var f = rhythm.features;
+      fillStats('rhythm-stats', [
+        { label: 'Heart rate', value: fmt(rhythm.bpm, 1) + ' bpm', note: 'mean of detected R-R' },
+        { label: 'RR scatter', value: fmt(f.cv, 3), note: 'CV of NN intervals' },
+        { label: 'SampEn', value: fmt(f.sampEn, 2), note: 'm=2, r=0.2 SD' },
+        { label: 'Ectopy', value: String(f.ectopyCount), note: 'compensatory pauses' }
+      ]);
+
+      var list = byId('rhythm-reasons');
+      if (list) {
+        list.textContent = '';
+        rhythm.reasons.forEach(function (r) {
+          var li = d.createElement('li');
+          li.textContent = r;
+          list.appendChild(li);
+        });
+      }
+
+      var flags = byId('artifact-flags');
+      if (flags) {
+        flags.textContent = '';
+        var chips = [];
+        if (artifacts.humFlag) chips.push({ t: 'powerline hum ' + fmt(artifacts.humMv, 2) + ' mV', c: 'flag-bad' });
+        if (artifacts.wanderFlag) chips.push({ t: 'baseline wander ' + fmt(artifacts.wanderMv, 2) + ' mV', c: 'flag-bad' });
+        if (!chips.length) chips.push({ t: 'no significant artefact', c: 'flag-ok' });
+        chips.forEach(function (chip) {
+          var s = d.createElement('span');
+          s.className = 'flag ' + chip.c;
+          s.textContent = chip.t;
+          flags.appendChild(s);
+        });
+      }
+    }
+
+    function drawPoincareLive() {
+      var c = setupCanvas(byId('poincare-live-canvas'), 230);
+      if (!c) return;
+      var ev = state.evaluation;
+      var rr = [];
+      if (ev && state.record) {
+        var peaks = value('poincare-source') === 'truth' ? state.record.rPeaks : ev.hrvPeaks;
+        rr = E.Analysis.rrIntervals(peaks, state.record.samplingRate);
+      }
+      var ell = plotPoincare(c, rr, {
+        ellipse: isChecked('poincare-ellipse', true),
+        ectopy: isChecked('poincare-ectopy', true),
+        pad: { l: 50, r: 14, t: 16, b: 30 }
+      });
+      if (ell && ell.sd1 > 0) {
+        var f = E.Rhythm.rrFeatures(rr);
+        fillStats('poincare-stats', [
+          { label: 'Mean RR', value: fmt(f.meanNN, 0) + ' ms' },
+          { label: 'SDNN', value: fmt(f.sdnn, 1) + ' ms' },
+          { label: 'RMSSD', value: fmt(f.rmssd, 1) + ' ms' },
+          { label: 'pNN50', value: fmt(f.pnn50, 1) + ' %' },
+          { label: 'SD1/SD2', value: fmt(ell.sd1sd2, 3) }
+        ]);
+      } else {
+        fillStats('poincare-stats', []);
+      }
+    }
+
+    /* --- evaluation tab: rhythm benchmark --- */
+
+    function renderRhythmBench() {
+      var t0 = Date.now();
+      var res = E.Rhythm.runRhythmBenchmark();
+      var elapsed = Date.now() - t0;
+      state.rhythmBench = res;
+      tableRows('rhythm-metrics-body', res.metrics.map(function (m) {
+        return [m.label, m.tp, m.fp, m.fn, m.tn,
+          pct(m.sensitivity), pct(m.specificity), fmt(m.f1, 3)];
+      }));
+      tableRows('rhythm-bench-body', res.rows.map(function (r) {
+        return [r.id, r.expectedLabel, r.predictedLabel, fmt(r.trueBpm, 1), fmt(r.bpm, 1),
+          fmt(r.bpmError, 1), fmt(r.detF1, 3),
+          { text: r.ok ? 'MATCH' : 'MISS', className: r.ok ? 'good' : 'bad' }];
+      }));
+      fillStats('rhythm-bench-summary', [
+        { label: 'Accuracy', value: pct(res.accuracy), note: res.correct + ' of ' + res.total + ' strips' },
+        { label: 'Macro F1', value: fmt(res.macroF1, 3), note: 'six classes' },
+        { label: 'BPM MAE', value: fmt(res.maeBpm, 1) + ' bpm', note: 'rate estimate error' },
+        { label: 'Detection F1', value: fmt(res.meanDetF1, 3), note: 'Pan-Tompkins on strips' },
+        { label: 'Runtime', value: elapsed + ' ms', note: 'detection plus classification' }
+      ]);
+      text(byId('rhythm-bench-time'), 'Executed in ' + elapsed + ' ms on this device.');
+    }
+
     /* --- export tab --- */
 
     function buildExport() {
@@ -778,16 +1045,13 @@
       setStatus('WFDB text files built locally for ' + recordName + '. Use the download buttons to save them.', 'info');
     }
 
-    function download(kind, ext) {
-      if (!state.exportFiles) return;
-      var content = state.exportFiles[kind];
-      if (content === undefined) return;
+    function saveText(content, filename) {
       try {
         var blob = new w.Blob([content], { type: 'text/plain;charset=utf-8' });
         var url = w.URL.createObjectURL(blob);
         var a = d.createElement('a');
         a.href = url;
-        a.download = state.exportFiles.name + '.' + ext;
+        a.download = filename;
         if (d.body && d.body.appendChild) d.body.appendChild(a);
         if (a.click) a.click();
         if (a.remove) a.remove();
@@ -795,6 +1059,99 @@
       } catch (e) {
         setStatus('Download unavailable in this environment. Copy the preview text instead.', 'warn');
       }
+    }
+
+    function download(kind, ext) {
+      if (!state.exportFiles) return;
+      var content = state.exportFiles[kind];
+      if (content === undefined) return;
+      saveText(content, state.exportFiles.name + '.' + ext);
+    }
+
+    /* Clinical strip and report: filtered CSV, fingerprinted JSON and
+       the printable SVG, plus a print path that isolates the strip. */
+    function buildClinical() {
+      if (!state.record) { setStatus('Generate a record before building the clinical files.', 'warn'); return; }
+      var leadIdx = num('strip-lead', 1);
+      var seconds = num('strip-seconds', 10);
+      var files = clinicalFiles(state.record, state.evaluation, {
+        leadIndex: leadIdx, seconds: seconds, name: value('export-name')
+      });
+      state.clinicalFiles = files;
+      var img = byId('strip-preview');
+      if (img) {
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(files.svg);
+        img.hidden = false;
+        if (img.removeAttribute) img.removeAttribute('hidden');
+      }
+      var parsed = JSON.parse(files.json);
+      var preview = [
+        'SHA-256 fingerprint: ' + files.fingerprint,
+        'Rhythm: ' + (parsed.rhythm && parsed.rhythm.label ? parsed.rhythm.label : 'n/a'),
+        'Artefacts: ' + (files.json.indexOf('"flags"') >= 0 ? JSON.stringify(parsed.artifacts.flags) : '[]'),
+        '',
+        files.json.split('\n').slice(0, 18).join('\n'),
+        '... (' + files.json.length + ' bytes total)'
+      ];
+      text(byId('report-preview'), preview.join('\n'));
+      text(byId('clinical-state'), 'lead ' + files.lead + ' | ' + files.seconds + ' s strip | ready');
+      ['download-csv', 'download-json', 'download-svg', 'print-strip'].forEach(function (id) {
+        var el = byId(id); if (el) el.disabled = false;
+      });
+      /* Mirror the strip into the hidden print area so the print rules
+         can isolate it from the rest of the page. */
+      var area = byId('print-area');
+      if (area) {
+        area.textContent = '';
+        var pi = d.createElement('img');
+        pi.src = img ? img.src : '';
+        pi.alt = 'Printable ECG strip';
+        area.appendChild(pi);
+      }
+      setStatus('Clinical files built: filtered CSV, fingerprinted JSON report and printable strip.', 'info');
+    }
+
+    function downloadClinical(kind, ext) {
+      if (!state.clinicalFiles) return;
+      var content = state.clinicalFiles[kind];
+      if (content === undefined) return;
+      saveText(content, state.clinicalFiles.name + '.' + ext);
+    }
+
+    function printStrip() {
+      if (!state.clinicalFiles) {
+        setStatus('Build the clinical strip first.', 'warn');
+        return;
+      }
+      state.printRequested = true;
+      var off = function () {
+        if (d.body && d.body.classList) d.body.classList.remove('print-mode');
+      };
+      if (d.body && d.body.classList) d.body.classList.add('print-mode');
+      if (w.addEventListener) w.addEventListener('afterprint', off);
+      if (w.print) w.print();
+      if (w.setTimeout) w.setTimeout(off, 1500); else off();
+    }
+
+    /* Apply '#key=value&key=value' pairs to the generator controls.
+       Only known keys are read; numbers that fail to parse are skipped
+       so a hand-edited or corrupted hash degrades gracefully. */
+    function applyHash(str) {
+      var parsed = hashDecode(str);
+      var cfg = {};
+      var applied = 0;
+      Object.keys(DEFAULTS).forEach(function (k) {
+        if (parsed[k] === undefined) return;
+        if (k === 'detectorMode') {
+          cfg[k] = parsed[k] === 'single' ? 'single' : 'ensemble';
+          applied++;
+        } else {
+          var n = Number(parsed[k]);
+          if (isFinite(n)) { cfg[k] = n; applied++; }
+        }
+      });
+      if (applied) applyControls(cfg);
+      return applied;
     }
 
     /* --- run --- */
@@ -820,7 +1177,14 @@
           { label: 'Compute', value: ms + ' ms', note: record.signals[0].length + ' samples x 12' }
         ]);
         drawECG(); drawLeads(); drawBode(); drawStages(); renderHRV(); renderScores(); renderFilters(); drawSweep();
+        renderRhythm(); drawPoincareLive();
         text(byId('export-state'), 'record ready');
+        text(byId('clinical-state'), 'record ready');
+        /* Persist the configuration in the URL hash so the same record
+           can be restored by a shared link. */
+        if (w.history && w.history.replaceState) {
+          try { w.history.replaceState(null, '', '#' + hashEncode(cfg)); } catch (e) { /* hash is best effort */ }
+        }
         setStatus('Generated ' + record.signals.length + ' leads x ' + record.signals[0].length + ' samples at ' +
           record.samplingRate + ' Hz in ' + ms + ' ms. ' + (score.falsePositives + score.falseNegatives) +
           ' unmatched peak events against model ground truth.', 'info');
@@ -851,6 +1215,7 @@
       if (TAB_IDS[index] === 'signal' && state.record) { drawLeads(); drawBode(); drawStages(); }
       if (TAB_IDS[index] === 'hrv' && state.evaluation) drawHRV();
       if (TAB_IDS[index] === 'eval' && state.evaluation) { drawScores(); drawSweep(); }
+      if (TAB_IDS[index] === 'workbench' && state.evaluation) drawPoincareLive();
     }
 
     function init() {
@@ -888,10 +1253,24 @@
       on(byId('reset'), 'click', function () { applyControls(DEFAULTS); setValue('preset', 'clinical'); setStatus('Defaults restored. Press Generate and analyse.', 'info'); });
       on(byId('detectorMode'), 'change', function () { if (state.record) { drawECG(); setStatus('Detector overlay switched.', 'info'); } });
       on(byId('lead-window'), 'change', function () { if (state.record) drawLeads(); });
+      on(byId('run-rhythm-bench'), 'click', function () {
+        setStatus('Running ten annotated rhythm strips through the detector and classifier...', 'info');
+        renderRhythmBench();
+      });
+      on(byId('poincare-source'), 'change', drawPoincareLive);
+      on(byId('poincare-ellipse'), 'change', drawPoincareLive);
+      on(byId('poincare-ectopy'), 'change', drawPoincareLive);
       on(byId('build-export'), 'click', buildExport);
       on(byId('download-header'), 'click', function () { download('header', 'hea'); });
       on(byId('download-signals'), 'click', function () { download('signals', 'csv'); });
       on(byId('download-ann'), 'click', function () { download('annotations', 'qrs'); });
+      on(byId('build-clinical'), 'click', buildClinical);
+      on(byId('download-csv'), 'click', function () { downloadClinical('csv', 'csv'); });
+      on(byId('download-json'), 'click', function () { downloadClinical('json', 'json'); });
+      on(byId('download-svg'), 'click', function () { downloadClinical('svg', 'svg'); });
+      on(byId('print-strip'), 'click', printStrip);
+      on(byId('strip-lead'), 'change', function () { if (state.clinicalFiles) buildClinical(); });
+      on(byId('strip-seconds'), 'change', function () { if (state.clinicalFiles) buildClinical(); });
       on(d, 'keydown', function (e) {
         if (e.target && e.target.tagName && /INPUT|SELECT|TEXTAREA/.test(String(e.target.tagName).toUpperCase())) return;
         if (e.key >= '1' && e.key <= '6') activate(Number(e.key) - 1, false);
@@ -899,16 +1278,31 @@
       });
       if (w.addEventListener) w.addEventListener('resize', function () {
         if (!state.record) return;
-        drawECG(); drawLeads(); drawBode(); drawStages(); drawHRV(); drawScores(); drawSweep();
+        drawECG(); drawLeads(); drawBode(); drawStages(); drawHRV(); drawScores(); drawSweep(); drawPoincareLive();
+      });
+      /* Normalise controls whose stub or hand-built DOMs may carry an
+         empty value; real markup already ships these defaults. */
+      function defVal(id, v) { var el = byId(id); if (el && (el.value === undefined || el.value === '')) el.value = v; }
+      defVal('poincare-source', 'detected');
+      defVal('strip-lead', '1');
+      defVal('strip-seconds', '10');
+      ['poincare-ellipse', 'poincare-ectopy'].forEach(function (id) {
+        var el = byId(id);
+        if (el && el.checked === undefined) el.checked = true;
       });
       applyControls(DEFAULTS);
+      /* A shared link restores the generator state from the URL hash
+         before anything else runs. */
+      var bootHash = (w.location && typeof w.location.hash === 'string') ? w.location.hash : '';
+      var restored = bootHash ? applyHash(bootHash) : 0;
       /* Materialise the initial ARIA state and the disabled download
          buttons rather than trusting the static markup alone. */
       activate(0, false);
-      ['download-header', 'download-signals', 'download-ann'].forEach(function (id) { var el = byId(id); if (el) el.disabled = true; });
+      ['download-header', 'download-signals', 'download-ann', 'download-csv', 'download-json', 'download-svg', 'print-strip'].forEach(function (id) { var el = byId(id); if (el) el.disabled = true; });
       renderFilters();
-      drawECG(); drawLeads(); drawBode(); drawStages(); drawHRV(); drawScores(); drawSweep();
-      setStatus('Ready. Press Generate and analyse to build a record.', 'info');
+      drawECG(); drawLeads(); drawBode(); drawStages(); drawHRV(); drawScores(); drawSweep(); drawPoincareLive();
+      setStatus(restored ? 'Restored ' + restored + ' settings from the URL hash.' :
+        'Ready. Press Generate and analyse to build a record.', 'info');
       return state;
     }
 
@@ -923,7 +1317,15 @@
     state.applyControls = applyControls;
     state.syncOutputs = syncOutputs;
     state.renderSuite = renderSuite;
+    state.renderRhythm = renderRhythm;
+    state.renderRhythmBench = renderRhythmBench;
+    state.buildClinical = buildClinical;
+    state.downloadClinical = downloadClinical;
+    state.printStrip = printStrip;
+    state.applyHash = applyHash;
     state.getExportFiles = function () { return state.exportFiles; };
+    state.getClinicalFiles = function () { return state.clinicalFiles; };
+    state.getRhythmBench = function () { return state.rhythmBench; };
     state.getRecord = function () { return state.record; };
     state.getEvaluation = function () { return state.evaluation; };
     api._state = state;

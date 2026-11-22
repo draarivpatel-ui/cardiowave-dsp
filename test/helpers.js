@@ -111,8 +111,8 @@ function createDom(ids, tabIds) {
   };
   doc.body = makeElement('body', 'body', doc);
   (ids || []).forEach(function (id) {
-    var tag = /^(ecg-canvas|leads-canvas|bode-canvas|stages-canvas|tacho-canvas|poincare-canvas|psd-canvas|score-canvas|sweep-canvas)$/.test(id)
-      ? 'canvas' : (/^(run|reset|run-eval|run-suite|build-export|download-header|download-signals|download-ann)$/.test(id) ? 'button' : 'div');
+    var tag = /^(ecg-canvas|leads-canvas|bode-canvas|stages-canvas|tacho-canvas|poincare-canvas|psd-canvas|score-canvas|sweep-canvas|poincare-live-canvas)$/.test(id)
+      ? 'canvas' : (/^(run|reset|run-eval|run-suite|build-export|download-header|download-signals|download-ann|run-rhythm-bench|build-clinical|download-csv|download-json|download-svg|print-strip)$/.test(id) ? 'button' : 'div');
     var el = makeElement(tag, id, doc);
     if (/^tab-/.test(id)) el.tagName = 'BUTTON';
     doc.elements[id] = el;

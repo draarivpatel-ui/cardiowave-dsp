@@ -15,6 +15,8 @@
   --signal: #4dd0c1;
   --detect: #ffb547;
   --truth: #ff7a9c;
+  --ellipse: #b088f5;
+  --poincare: #6fa8ff;
   --radius: 12px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -167,6 +169,8 @@ select, input[type="text"] {
 .swatch-signal { background: var(--signal); }
 .swatch-detect { background: var(--detect); }
 .swatch-truth { background: var(--truth); }
+.swatch-ellipse { background: var(--ellipse); }
+.swatch-poincare { background: var(--poincare); }
 .canvas-wrap { width: 100%; max-width: 100%; overflow: hidden; border-radius: 8px; background: #0a1322; border: 1px solid #22344f; }
 canvas { display: block; width: 100%; max-width: 100%; height: auto; touch-action: pan-y; }
 .caption { color: var(--muted); font-size: .78rem; margin: .55rem 0 0; }
@@ -197,6 +201,33 @@ canvas { display: block; width: 100%; max-width: 100%; height: auto; touch-actio
 .doc-list li { margin-bottom: .45rem; }
 .doc-list.ordered { padding-left: 1.3rem; }
 
+/* ---- Rhythm card and live Poincare ---- */
+.poincare-controls { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: center; margin-bottom: .7rem; }
+.check-label { display: inline-flex; align-items: center; gap: .45rem; font-size: .82rem; color: var(--muted); margin: 0; }
+.check-label input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.stat-grid-mini { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+.stat-grid-mini .stat-value { font-size: 1rem; }
+.pill-good { color: var(--good); border-color: rgba(99, 214, 139, .55); }
+.pill-warn { color: var(--warn); border-color: rgba(255, 181, 71, .55); }
+.reason-list { margin: .7rem 0 .2rem; padding-left: 1.15rem; font-size: .84rem; color: var(--muted); }
+.reason-list li { margin-bottom: .3rem; }
+.reason-list li::marker { color: var(--accent); }
+.flag-row { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .7rem; }
+.flag { display: inline-block; font-size: .72rem; font-weight: 650; letter-spacing: .02em; padding: .28rem .65rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.flag-ok { color: var(--good); border-color: rgba(99, 214, 139, .55); }
+.flag-bad { color: var(--danger); border-color: rgba(255, 122, 122, .55); }
+
+/* ---- Clinical strip preview and print ---- */
+.strip-preview-wrap { margin: .85rem 0 0; border: 1px solid var(--line); border-radius: 8px; overflow: auto; background: #fff; }
+.strip-preview-wrap:has(img[hidden]) { display: none; }
+.strip-img { display: block; width: 100%; height: auto; }
+#print-area { display: none; }
+@media print {
+  body.print-mode > *:not(#print-area) { display: none; }
+  body.print-mode #print-area { display: block; }
+  body.print-mode #print-area img { display: block; width: 100%; height: auto; }
+}
+
 .site-footer { border-top: 1px solid var(--line); padding: 1.2rem; text-align: center; color: var(--muted); font-size: .78rem; }
 
 @media (max-width: 700px) {
@@ -210,7 +241,10 @@ canvas { display: block; width: 100%; max-width: 100%; height: auto; touch-actio
   .control-actions .btn { width: 100%; }
   .hint { flex-basis: auto; }
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-grid-mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card-head { align-items: flex-start; }
+  .poincare-controls { flex-direction: column; align-items: stretch; }
+  .inline-label select { flex: 1; }
 }
 
 @media (max-width: 375px) {

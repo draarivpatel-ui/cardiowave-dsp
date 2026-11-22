@@ -6,6 +6,7 @@
 <meta name="description" content="CardioWave DSP: a zero-dependency 12-lead ECG synthesis, QRS detection, HRV and WFDB export workbench for education and research.">
 <meta name="color-scheme" content="dark light">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1220'/%3E%3Cpolyline points='4,16 10,16 13,7 17,25 20,13 22,16 28,16' fill='none' stroke='%234dd0c1' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <meta http-equiv="Permissions-Policy" content="geolocation=(), camera=(), microphone=(), payment=(), usb=()">
 <title>CardioWave DSP | 12-Lead ECG Workbench</title>
 <link rel="stylesheet" href="style.css">
@@ -131,6 +132,38 @@
     </div>
     <p class="caption" id="ecg-caption">Generated trace will appear after a run.</p>
   </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-head">
+        <h3>Live Poincare plot</h3>
+        <div class="legend" aria-hidden="true">
+          <span><i class="swatch swatch-poincare"></i> beat pairs</span>
+          <span><i class="swatch swatch-truth"></i> ectopic</span>
+          <span><i class="swatch swatch-ellipse"></i> SD1/SD2 ellipse</span>
+        </div>
+      </div>
+      <div class="poincare-controls">
+        <label class="inline-label" for="poincare-source">RR source
+          <select id="poincare-source"><option value="detected" selected>Detected beats</option><option value="truth">Ground truth</option></select>
+        </label>
+        <label class="check-label" for="poincare-ellipse"><input type="checkbox" id="poincare-ellipse" checked> SD1/SD2 ellipse</label>
+        <label class="check-label" for="poincare-ectopy"><input type="checkbox" id="poincare-ectopy" checked> Mark ectopic beats</label>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="poincare-live-canvas" role="img" aria-label="Live Poincare scatter of RR n against RR n plus one with the SD1 SD2 ellipse"></canvas>
+      </div>
+      <div class="stat-grid stat-grid-mini" id="poincare-stats" aria-label="HRV quick metrics"></div>
+      <p class="caption">Each point is one beat pair: x is RR(n), y is RR(n+1). The ellipse semi-axes are SD1 across the identity line and SD2 along it.</p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Rhythm classification</h3><span id="rhythm-label" class="pill">no run yet</span></div>
+      <div class="stat-grid stat-grid-mini" id="rhythm-stats"></div>
+      <ul class="reason-list" id="rhythm-reasons"><li>Run the workbench to classify the detected rhythm.</li></ul>
+      <div id="artifact-flags" class="flag-row" aria-label="Artefact flags"></div>
+      <p class="caption">Deterministic rules over the detected R-R series: sinus rate bands, compensatory-pause ectopy detection, dispersion plus sample entropy for irregular rhythms, and Goertzel hum with a baseline-wander meter for artefacts.</p>
+    </div>
+  </div>
 </section>
 
 <!-- ============================= SIGNAL ============================= -->
@@ -227,6 +260,22 @@
   </div>
 
   <div class="card">
+    <div class="card-head"><h3>Rhythm classifier benchmark</h3><button type="button" id="run-rhythm-bench" class="btn btn-small">Run rhythm benchmark</button></div>
+    <p class="caption">Ten annotated synthetic strips carry ground-truth rhythm labels. Each strip goes through the real Pan-Tompkins detector, then the deterministic classifier, and is scored one-versus-rest per class. <span id="rhythm-bench-time"></span></p>
+    <div class="table-scroll"><table class="data-table">
+      <caption class="sr-only">Per-class rhythm classification metrics</caption>
+      <thead><tr><th scope="col">Class</th><th scope="col">TP</th><th scope="col">FP</th><th scope="col">FN</th><th scope="col">TN</th><th scope="col">Sensitivity</th><th scope="col">Specificity</th><th scope="col">F1</th></tr></thead>
+      <tbody id="rhythm-metrics-body"><tr><td colspan="8">Run the rhythm benchmark to score the classifier.</td></tr></tbody>
+    </table></div>
+    <div class="table-scroll"><table class="data-table">
+      <caption class="sr-only">Per-strip benchmark results with beat-rate error</caption>
+      <thead><tr><th scope="col">Strip</th><th scope="col">Expected</th><th scope="col">Predicted</th><th scope="col">True bpm</th><th scope="col">Meas bpm</th><th scope="col">bpm err</th><th scope="col">Det F1</th><th scope="col">Verdict</th></tr></thead>
+      <tbody id="rhythm-bench-body"><tr><td colspan="8">No strips evaluated yet.</td></tr></tbody>
+    </table></div>
+    <div id="rhythm-bench-summary" class="stat-grid" aria-live="polite"></div>
+  </div>
+
+  <div class="card">
     <div class="card-head"><h3>Filter verification</h3></div>
     <div class="table-scroll"><table class="data-table">
       <caption class="sr-only">Measured filter passband and stopband attenuation</caption>
@@ -273,6 +322,35 @@
     </div>
     <pre id="export-preview" class="code-preview" aria-label="WFDB header preview" tabindex="0">Build files to see the header preview.</pre>
   </div>
+
+  <div class="card">
+    <div class="card-head"><h3>Clinical strip and report</h3><span id="clinical-state" class="pill">no record</span></div>
+    <p class="caption">One click builds three deterministic files: a filtered 12-lead CSV (mains notch plus baseline high-pass), a structured JSON report fingerprinted with SHA-256, and a printable 25 mm/s, 10 mm/mV pink-grid ECG strip.</p>
+    <div class="export-grid">
+      <div>
+        <label for="strip-lead">Strip lead</label>
+        <select id="strip-lead">
+          <option value="0">I</option><option value="1" selected>II</option><option value="2">III</option>
+          <option value="3">aVR</option><option value="4">aVL</option><option value="5">aVF</option>
+          <option value="6">V1</option><option value="7">V2</option><option value="8">V3</option>
+          <option value="9">V4</option><option value="10">V5</option><option value="11">V6</option>
+        </select>
+      </div>
+      <div>
+        <label for="strip-seconds">Strip length <output id="strip-seconds-out" for="strip-seconds">10 s</output></label>
+        <input type="range" id="strip-seconds" min="5" max="20" step="1" value="10">
+      </div>
+    </div>
+    <div class="control-actions">
+      <button type="button" id="build-clinical" class="btn btn-primary">Build clinical files</button>
+      <button type="button" id="download-csv" class="btn" disabled>Download filtered .csv</button>
+      <button type="button" id="download-json" class="btn" disabled>Download report .json</button>
+      <button type="button" id="download-svg" class="btn" disabled>Download strip .svg</button>
+      <button type="button" id="print-strip" class="btn" disabled>Print strip</button>
+    </div>
+    <div class="strip-preview-wrap"><img id="strip-preview" class="strip-img" alt="Printable pink-grid ECG strip preview" hidden></div>
+    <pre id="report-preview" class="code-preview" aria-label="JSON report preview" tabindex="0">Build clinical files to see the report preview.</pre>
+  </div>
 </section>
 
 <!-- ============================= DOCS ============================= -->
@@ -287,6 +365,8 @@
         <dt><code>src/cardio.js</code></dt><dd>McSharry ODE 12-lead synthesis, lead projection matrix, seeded RR series, additive hum, wander and EMG artefacts, and physiological scaling.</dd>
         <dt><code>src/filters.js</code></dt><dd>Analogue Butterworth prototype, low-pass to band-pass and band-stop transforms, bilinear transform, SOS pairing, causal filtering, zero-phase forward-backward filtering and magnitude response.</dd>
         <dt><code>src/analysis.js</code></dt><dd>Notch and high-pass conditioning, Pan-Tompkins QRS detection, multi-lead voting ensemble, detection scoring, HRV time and frequency metrics, quadratic spline interpolation and Welch PSD.</dd>
+        <dt><code>src/rhythm.js</code></dt><dd>Deterministic rhythm classification (sinus bands, compensatory-pause ectopy, entropy irregularity), Goertzel hum and baseline-wander meters, annotated strip synthesis and the benchmark scorer.</dd>
+        <dt><code>src/report.js</code></dt><dd>Pure SHA-256, canonical JSON, filtered-trace CSV, the structured fingerprinted report and the printable 25 mm/s pink-grid SVG strip.</dd>
       </dl>
     </div>
     <div class="card"><h3>Signal pipeline</h3>
@@ -320,6 +400,7 @@ node --test test/*.test.js</pre>
   </div>
 </section>
 
+<div id="print-area" aria-hidden="true"></div>
 </main>
 
 <footer class="site-footer">
@@ -329,6 +410,8 @@ node --test test/*.test.js</pre>
 <script src="src/filters.js"></script>
 <script src="src/cardio.js"></script>
 <script src="src/analysis.js"></script>
+<script src="src/rhythm.js"></script>
+<script src="src/report.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
