@@ -387,7 +387,7 @@
         var tr = d.createElement('tr');
         row.forEach(function (cell) {
           var td = d.createElement('td');
-          if (cell && typeof cell === 'object' && cell.html !== undefined) {
+          if (cell && typeof cell === 'object' && cell.text !== undefined) {
             td.textContent = String(cell.text);
             td.className = cell.className || '';
           } else {

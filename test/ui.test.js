@@ -202,3 +202,34 @@ test('all presets produce finite records and evaluation scores', () => {
     assert.ok(!doc.getElementById('status').textContent.includes('Engine error'), 'engine error on ' + key);
   }
 });
+
+test('rendered tables never show object, NaN or undefined strings', () => {
+  const { doc } = freshApp();
+  doc.getElementById('run').click();
+  doc.getElementById('run-suite').click();
+  const bodies = ['score-body', 'suite-body', 'filter-body', 'hrv-body'];
+  for (const id of bodies) {
+    const body = doc.getElementById(id);
+    assert.ok(body.children.length > 0, id + ' has rows');
+    for (const tr of body.children) {
+      for (const td of tr.children) {
+        const s = td.textContent;
+        assert.ok(!s.includes('[object Object]'), id + ': ' + s);
+        assert.ok(!s.includes('NaN'), id + ': ' + s);
+        assert.ok(!s.includes('undefined'), id + ': ' + s);
+      }
+    }
+  }
+  // The Delta F1 column is the last cell of each suite row and carries
+  // a signed three-decimal delta with a good/bad class.
+  for (const tr of doc.getElementById('suite-body').children) {
+    const cell = tr.children[tr.children.length - 1];
+    assert.match(cell.textContent, /^[+-]\d+\.\d{3}$/, 'delta cell: ' + cell.textContent);
+    assert.ok(cell.className === 'good' || cell.className === 'bad', 'delta class: ' + cell.className);
+  }
+  // The filter table verdict cells resolve to PASS or FAIL, not an object.
+  for (const tr of doc.getElementById('filter-body').children) {
+    const cell = tr.children[tr.children.length - 1];
+    assert.ok(cell.textContent === 'PASS' || cell.textContent === 'FAIL', 'verdict: ' + cell.textContent);
+  }
+});
