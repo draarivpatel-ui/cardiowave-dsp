@@ -490,8 +490,17 @@
   /* Heart-rate variability                                               */
   /* ------------------------------------------------------------------ */
 
+  function validatePeakSeries(peaks, fs) {
+    assert(isFiniteNumber(fs) && fs > 0, 'positive sampling rate required for R-R metrics');
+    for (var i = 0; i < peaks.length; i++) {
+      assert(isFiniteNumber(peaks[i]), 'R peak indices must be finite');
+      if (i > 0) assert(peaks[i] > peaks[i - 1], 'R peak indices must be strictly increasing');
+    }
+  }
+
   /* R-R intervals in milliseconds derived from peak indices. */
   function rrIntervals(peaks, fs) {
+    validatePeakSeries(peaks, fs);
     var intervals = [];
     for (var i = 1; i < peaks.length; i++) {
       intervals.push((peaks[i] - peaks[i - 1]) / fs * 1000);
@@ -501,6 +510,7 @@
 
   /* Timestamps, in seconds, of each R-R interval. */
   function rrTimes(peaks, fs) {
+    validatePeakSeries(peaks, fs);
     var times = [];
     for (var i = 1; i < peaks.length; i++) times.push(peaks[i] / fs);
     return times;
@@ -827,15 +837,38 @@
     }
   }
 
-  /* Integrates a power spectrum over a frequency band. */
+  /* Integrates a power spectrum over a frequency band.
+
+     The PSD samples are joined by straight lines and only the part of each
+     segment inside the requested band is integrated. Clipping the edge bins
+     matters for HRV bands, whose edges almost never fall exactly on Welch
+     frequency bins; counting a whole edge bin because its upper sample is in
+     range systematically inflates LF and HF power. */
   function bandPower(psd, low, high) {
-    var total = 0;
-    for (var i = 1; i < psd.frequency.length; i++) {
-      var f = psd.frequency[i];
-      if (f >= low && f < high) {
-        var df = psd.frequency[i] - psd.frequency[i - 1];
-        total += 0.5 * (psd.power[i] + psd.power[i - 1]) * df;
+    if (!isFiniteNumber(low) || !isFiniteNumber(high) || high < low) {
+      throw new RangeError('bandPower requires finite band edges with low <= high');
+    }
+    if (high === low) return 0;
+    var freq = psd.frequency;
+    var power = psd.power;
+    function densityAt(f) {
+      if (f <= freq[0]) return power[0];
+      if (f >= freq[freq.length - 1]) return power[power.length - 1];
+      for (var j = 1; j < freq.length; j++) {
+        if (f <= freq[j]) {
+          var span = freq[j] - freq[j - 1];
+          var t = span > 0 ? (f - freq[j - 1]) / span : 0;
+          return power[j - 1] + t * (power[j] - power[j - 1]);
+        }
       }
+      return 0;
+    }
+    var total = 0;
+    for (var i = 1; i < freq.length; i++) {
+      var a = freq[i - 1], b = freq[i];
+      var lo = Math.max(low, a), hi = Math.min(high, b);
+      if (hi <= lo) continue;
+      total += 0.5 * (densityAt(lo) + densityAt(hi)) * (hi - lo);
     }
     return total;
   }
@@ -846,9 +879,20 @@
      power spectral density estimate. */
   function hrvFrequency(peaks, fs, options) {
     var opts = options || {};
-    var interpolationRate = opts.interpolationRate || 100;
+    var interpolationRate = opts.interpolationRate === undefined ? 100 : Number(opts.interpolationRate);
     var lfBand = opts.lfBand || [0.04, 0.15];
     var hfBand = opts.hfBand || [0.15, 0.4];
+    assert(isFiniteNumber(interpolationRate) && interpolationRate > 0,
+      'positive interpolation rate required for frequency-domain HRV');
+    function validBand(band, name) {
+      return Array.isArray(band) && band.length === 2 &&
+        isFiniteNumber(band[0]) && isFiniteNumber(band[1]) &&
+        band[0] >= 0 && band[0] < band[1];
+    }
+    assert(validBand(lfBand, 'lfBand'), 'LF band must have low < high');
+    assert(validBand(hfBand, 'hfBand'), 'HF band must have low < high');
+    assert(Math.abs(hfBand[0] - lfBand[1]) < 1e-12,
+      'LF and HF bands must be contiguous at their shared edge');
 
     var rri = rrIntervals(peaks, fs);
     var times = rrTimes(peaks, fs);
@@ -875,7 +919,8 @@
     var psd = welchPsd(interpolated, interpolationRate, nperseg, nperseg * 2);
     var lf = bandPower(psd, lfBand[0], lfBand[1]);
     var hf = bandPower(psd, hfBand[0], hfBand[1]);
-    var totalPower = lf + hf;
+    var vlf = bandPower(psd, 0, lfBand[0]);
+    var totalPower = vlf + lf + hf;
 
     return {
       lf: lf,

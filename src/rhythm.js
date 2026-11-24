@@ -338,8 +338,12 @@
     if (signal.length > 64) {
       var sos = Filters.butter(2, [0.8], 'lowpass', fs);
       var baseline = Filters.sosfiltfilt(sos, signal);
+      var dc = mean(baseline);
       var acc = 0;
-      for (var i = 0; i < baseline.length; i++) acc += baseline[i] * baseline[i];
+      for (var i = 0; i < baseline.length; i++) {
+        var centred = baseline[i] - dc;
+        acc += centred * centred;
+      }
       wanderMv = Math.sqrt(acc / baseline.length);
     }
     var humMv = Math.max(hum60, hum120);

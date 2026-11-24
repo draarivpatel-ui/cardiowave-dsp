@@ -91,6 +91,7 @@ kbd { background: var(--panel-2); border: 1px solid var(--line); border-bottom-w
   flex: 0 0 auto; border: 1px solid transparent; background: transparent; color: var(--muted);
   font: inherit; font-weight: 600; font-size: .88rem;
   padding: .55rem .9rem; border-radius: 8px; cursor: pointer; white-space: nowrap;
+  min-height: 44px;
 }
 .tab:hover { color: var(--text); background: var(--panel); }
 .tab[aria-selected="true"] { color: #05201d; background: var(--accent); border-color: var(--accent); }
@@ -99,7 +100,15 @@ main { max-width: 1280px; margin: 0 auto; padding: 1.25rem clamp(.8rem, 3vw, 2re
 .panel { display: none; }
 .panel.active { display: block; animation: fadein .2s ease-out; }
 @keyframes fadein { from { opacity: .4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .panel.active { animation: none; } * { scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .panel.active { animation: none; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 
 .panel-intro { margin-bottom: 1.1rem; }
 .panel-intro p { color: var(--muted); max-width: 78ch; }

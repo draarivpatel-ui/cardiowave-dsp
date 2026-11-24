@@ -876,7 +876,7 @@
       ['lf', 'LF power', 'ms^2', 'Welch power in 0.04 to 0.15 Hz'],
       ['hf', 'HF power', 'ms^2', 'Welch power in 0.15 to 0.40 Hz'],
       ['lfHf', 'LF/HF', 'ratio', 'Autonomic balance index'],
-      ['totalPower', 'Total power', 'ms^2', 'LF plus HF band power']
+      ['totalPower', 'Total power', 'ms^2', 'VLF plus LF plus HF band power']
     ];
 
     function renderHRV() {
@@ -1147,7 +1147,14 @@
           applied++;
         } else {
           var n = Number(parsed[k]);
-          if (isFinite(n)) { cfg[k] = n; applied++; }
+          if (isFinite(n)) {
+            var control = byId(k);
+            var min = control && control.min !== undefined && control.min !== '' ? Number(control.min) : null;
+            var max = control && control.max !== undefined && control.max !== '' ? Number(control.max) : null;
+            if (min !== null && isFinite(min) && n < min) n = min;
+            if (max !== null && isFinite(max) && n > max) n = max;
+            cfg[k] = n; applied++;
+          }
         }
       });
       if (applied) applyControls(cfg);
@@ -1169,7 +1176,7 @@
         stats([
           { label: 'Reference beats', value: String(record.rPeaks.length), note: 'model phase crossings' },
           { label: 'Detections', value: String(cfg.detectorMode === 'single' ? ev.single.peaks.length : ev.ensemble.peaks.length), note: cfg.detectorMode },
-          { label: 'F1 score', value: fmt(score.f1, 3), note: '150 ms tolerance' },
+          { label: 'F1 score', value: fmt(score.f1, 3), note: fmt(cfg.toleranceMs, 0) + ' ms tolerance' },
           { label: 'Sensitivity', value: pct(score.sensitivity), note: 'TP / reference' },
           { label: 'Precision', value: pct(score.positivePredictivity), note: 'TP / detections' },
           { label: 'Timing RMSE', value: fmt(score.rmseMs, 1) + ' ms', note: 'matched peaks' },
