@@ -1,0 +1,63 @@
+1
+00:00:00,520 --> 00:00:07,764
+CardioWave DSP is a synthetic twelve lead E C G workbench that runs the whole signal chain in one page.
+
+2
+00:00:07,934 --> 00:00:14,983
+Everything is computed in the browser, deterministically, with zero dependencies and no network.
+
+3
+00:00:15,603 --> 00:00:22,487
+A seeded generator builds the beat interval series with Mayer wave and respiration components.
+
+4
+00:00:22,658 --> 00:00:32,784
+Twelve coupled McSharry oscillators integrate on a fourth order Runge Kutta stepper, then project through a twelve by five amplitude matrix.
+
+5
+00:00:32,954 --> 00:00:41,879
+Mains hum, baseline wander and band limited E M G noise join per lead, while the ground truth beats stay known by construction.
+
+6
+00:00:42,499 --> 00:00:48,585
+One click generates and analyses a record, scoring two detectors against that truth.
+
+7
+00:00:48,754 --> 00:00:58,441
+A single lead two Pan Tompkins chain band passes, differentiates, squares and integrates over a one hundred twenty millisecond window.
+
+8
+00:00:58,611 --> 00:01:06,414
+A twelve lead voting ensemble clusters detections and refines each survivor on the spatial magnitude trace.
+
+9
+00:01:06,584 --> 00:01:14,713
+The stat grid reports sensitivity, precision, F one and timing R M S E at a one hundred fifty millisecond tolerance.
+
+10
+00:01:15,333 --> 00:01:25,699
+The signal tab draws all twelve leads, the Butterworth magnitude response, and the Pan Tompkins stages from filtered wave to detection envelope.
+
+11
+00:01:25,870 --> 00:01:36,873
+Back on the bench, a live Poincare plot marks each beat pair with its S D one S D two ellipse, and the rhythm card classifies the strip by deterministic rules.
+
+12
+00:01:37,493 --> 00:01:46,137
+H R V analysis reports time domain stats, Poincare geometry and a Welch power spectral density with L F and H F band powers.
+
+13
+00:01:46,307 --> 00:02:00,032
+The evaluation tab runs a nine case benchmark across rates, sampling rates and noise, measures the real filter response at six probe frequencies, and names seven known failure modes in the open.
+
+14
+00:02:00,653 --> 00:02:11,540
+The export tab writes PhysioNet W F D B compatible header, signal and annotation text, plus a clinical strip and an S H A 256 fingerprinted report.
+
+15
+00:02:11,709 --> 00:02:18,835
+Three hundred thirty six Node tests pass with zero failures, re verified inside this recording run.
+
+16
+00:02:19,006 --> 00:02:24,734
+CardioWave DSP. Synthetic signals, honest scores, education and research only.

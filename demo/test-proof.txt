@@ -1,0 +1,7 @@
+CardioWave DSP - verification proof
+commit: 12b4924 (captured during scripts/record-demo.mjs)
+
+$ node --test test/
+  tests 336, pass 336, fail 0
+$ hark_honesty_and_defect_harness.py --audit <repo>
+  Audited 27 files in cardiowave-dsp: 0 violation(s).

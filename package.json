@@ -6,7 +6,10 @@
   "type": "commonjs",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "start": "node -e \"console.log('Open index.html in a browser, or serve this folder with any static file server.')\""
+    "start": "node scripts/serve.mjs",
+    "demo:synth": "node scripts/record-demo.mjs synth",
+    "demo:capture": "node scripts/record-demo.mjs capture",
+    "demo:check": "node scripts/record-demo.mjs check"
   },
   "license": "MIT",
   "engines": {

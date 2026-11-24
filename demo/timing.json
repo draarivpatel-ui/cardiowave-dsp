@@ -1,0 +1,126 @@
+{
+ "voice": "OmniVoice-bf16 (Aariv voice clone)",
+ "seed": 1,
+ "sr": 24000,
+ "lead": 0.6,
+ "gap_sent": 0.3,
+ "gap_para": 0.75,
+ "tail": 1,
+ "total": 145.684,
+ "wav_seconds": 145.684,
+ "words": 323,
+ "sentences": [
+  {
+   "para": 0,
+   "sent": 0,
+   "text": "CardioWave DSP is a synthetic twelve lead E C G workbench that runs the whole signal chain in one page.",
+   "dur": 7.114,
+   "start": 0.6
+  },
+  {
+   "para": 0,
+   "sent": 1,
+   "text": "Everything is computed in the browser, deterministically, with zero dependencies and no network.",
+   "dur": 6.919,
+   "start": 8.014
+  },
+  {
+   "para": 1,
+   "sent": 0,
+   "text": "A seeded generator builds the beat interval series with Mayer wave and respiration components.",
+   "dur": 6.754,
+   "start": 15.683
+  },
+  {
+   "para": 1,
+   "sent": 1,
+   "text": "Twelve coupled McSharry oscillators integrate on a fourth order Runge Kutta stepper, then project through a twelve by five amplitude matrix.",
+   "dur": 9.996,
+   "start": 22.738
+  },
+  {
+   "para": 1,
+   "sent": 2,
+   "text": "Mains hum, baseline wander and band limited E M G noise join per lead, while the ground truth beats stay known by construction.",
+   "dur": 8.795,
+   "start": 33.034
+  },
+  {
+   "para": 2,
+   "sent": 0,
+   "text": "One click generates and analyses a record, scoring two detectors against that truth.",
+   "dur": 5.956,
+   "start": 42.579
+  },
+  {
+   "para": 2,
+   "sent": 1,
+   "text": "A single lead two Pan Tompkins chain band passes, differentiates, squares and integrates over a one hundred twenty millisecond window.",
+   "dur": 9.557,
+   "start": 48.834
+  },
+  {
+   "para": 2,
+   "sent": 2,
+   "text": "A twelve lead voting ensemble clusters detections and refines each survivor on the spatial magnitude trace.",
+   "dur": 7.673,
+   "start": 58.691
+  },
+  {
+   "para": 2,
+   "sent": 3,
+   "text": "The stat grid reports sensitivity, precision, F one and timing R M S E at a one hundred fifty millisecond tolerance.",
+   "dur": 7.999,
+   "start": 66.664
+  },
+  {
+   "para": 3,
+   "sent": 0,
+   "text": "The signal tab draws all twelve leads, the Butterworth magnitude response, and the Pan Tompkins stages from filtered wave to detection envelope.",
+   "dur": 10.236,
+   "start": 75.413
+  },
+  {
+   "para": 3,
+   "sent": 1,
+   "text": "Back on the bench, a live Poincare plot marks each beat pair with its S D one S D two ellipse, and the rhythm card classifies the strip by deterministic rules.",
+   "dur": 10.873,
+   "start": 85.95
+  },
+  {
+   "para": 4,
+   "sent": 0,
+   "text": "H R V analysis reports time domain stats, Poincare geometry and a Welch power spectral density with L F and H F band powers.",
+   "dur": 8.514,
+   "start": 97.573
+  },
+  {
+   "para": 4,
+   "sent": 1,
+   "text": "The evaluation tab runs a nine case benchmark across rates, sampling rates and noise, measures the real filter response at six probe frequencies, and names seven known failure modes in the open.",
+   "dur": 13.595,
+   "start": 106.387
+  },
+  {
+   "para": 5,
+   "sent": 0,
+   "text": "The export tab writes PhysioNet W F D B compatible header, signal and annotation text, plus a clinical strip and an S H A 256 fingerprinted report.",
+   "dur": 10.757,
+   "start": 120.733
+  },
+  {
+   "para": 5,
+   "sent": 1,
+   "text": "Three hundred thirty six Node tests pass with zero failures, re verified inside this recording run.",
+   "dur": 6.996,
+   "start": 131.789
+  },
+  {
+   "para": 5,
+   "sent": 2,
+   "text": "CardioWave DSP. Synthetic signals, honest scores, education and research only.",
+   "dur": 5.598,
+   "start": 139.086
+  }
+ ]
+}

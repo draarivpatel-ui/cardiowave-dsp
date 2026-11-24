@@ -1,0 +1,21 @@
+CardioWave DSP is a synthetic twelve lead E C G workbench that runs the whole signal chain in one page.
+Everything is computed in the browser, deterministically, with zero dependencies and no network.
+
+A seeded generator builds the beat interval series with Mayer wave and respiration components.
+Twelve coupled McSharry oscillators integrate on a fourth order Runge Kutta stepper, then project through a twelve by five amplitude matrix.
+Mains hum, baseline wander and band limited E M G noise join per lead, while the ground truth beats stay known by construction.
+
+One click generates and analyses a record, scoring two detectors against that truth.
+A single lead two Pan Tompkins chain band passes, differentiates, squares and integrates over a one hundred twenty millisecond window.
+A twelve lead voting ensemble clusters detections and refines each survivor on the spatial magnitude trace.
+The stat grid reports sensitivity, precision, F one and timing R M S E at a one hundred fifty millisecond tolerance.
+
+The signal tab draws all twelve leads, the Butterworth magnitude response, and the Pan Tompkins stages from filtered wave to detection envelope.
+Back on the bench, a live Poincare plot marks each beat pair with its S D one S D two ellipse, and the rhythm card classifies the strip by deterministic rules.
+
+H R V analysis reports time domain stats, Poincare geometry and a Welch power spectral density with L F and H F band powers.
+The evaluation tab runs a nine case benchmark across rates, sampling rates and noise, measures the real filter response at six probe frequencies, and names seven known failure modes in the open.
+
+The export tab writes PhysioNet W F D B compatible header, signal and annotation text, plus a clinical strip and an S H A 256 fingerprinted report.
+Three hundred thirty six Node tests pass with zero failures, re verified inside this recording run.
+CardioWave DSP. Synthetic signals, honest scores, education and research only.
