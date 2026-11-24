@@ -9,7 +9,8 @@
     "start": "node scripts/serve.mjs",
     "demo:synth": "node scripts/record-demo.mjs synth",
     "demo:capture": "node scripts/record-demo.mjs capture",
-    "demo:check": "node scripts/record-demo.mjs check"
+    "demo:check": "node scripts/record-demo.mjs check",
+    "audit": "node scripts/browser-audit.mjs"
   },
   "license": "MIT",
   "engines": {

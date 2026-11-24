@@ -45,10 +45,7 @@
 
 <!-- ============================= WORKBENCH ============================= -->
 <section id="panel-workbench" role="tabpanel" aria-labelledby="tab-workbench" class="panel active">
-  <div class="panel-intro">
-    <h2>Signal generator</h2>
-    <p>Build a deterministic 12-lead record from the McSharry dynamical model. Every setting is seeded, so the same parameters always produce the same samples.</p>
-  </div>
+  <h2 class="panel-title">Signal generator</h2>
 
   <div class="controls" aria-label="Generator controls">
     <div class="control-group">
@@ -168,10 +165,7 @@
 
 <!-- ============================= SIGNAL ============================= -->
 <section id="panel-signal" role="tabpanel" aria-labelledby="tab-signal" class="panel" hidden>
-  <div class="panel-intro">
-    <h2>Signal and leads</h2>
-    <p>Compare the twelve projected leads, inspect the filter chain response, and see the Pan-Tompkins integration envelope.</p>
-  </div>
+  <h2 class="panel-title">Signal and leads</h2>
   <div class="card">
     <div class="card-head">
       <h3>12-lead matrix</h3>
@@ -198,10 +192,7 @@
 
 <!-- ============================= HRV ============================= -->
 <section id="panel-hrv" role="tabpanel" aria-labelledby="tab-hrv" class="panel" hidden>
-  <div class="panel-intro">
-    <h2>Heart-rate variability</h2>
-    <p>Time-domain, Poincare and frequency-domain metrics computed from the detected beat positions.</p>
-  </div>
+  <h2 class="panel-title">Heart-rate variability</h2>
   <div class="card">
     <div class="card-head"><h3>Metric report</h3><span id="hrv-source" class="pill">no run yet</span></div>
     <div class="table-scroll"><table id="hrv-table" class="data-table">
@@ -229,10 +220,7 @@
 
 <!-- ============================= EVALUATION ============================= -->
 <section id="panel-eval" role="tabpanel" aria-labelledby="tab-eval" class="panel" hidden>
-  <div class="panel-intro">
-    <h2>Evaluation and benchmark</h2>
-    <p>Quantitative scoring against the model ground truth, an explicit baseline comparison, and documented failure modes. All figures are computed live from the current seeded record.</p>
-  </div>
+  <h2 class="panel-title">Evaluation and benchmark</h2>
 
   <div class="card">
     <div class="card-head">
@@ -240,6 +228,7 @@
       <button type="button" id="run-eval" class="btn btn-small">Re-run benchmark</button>
     </div>
     <p class="caption" id="eval-config">No run yet.</p>
+    <p class="caption">Each score is an explicit baseline comparison between the single-lead Pan-Tompkins detector and the twelve-lead voting ensemble.</p>
     <div class="table-scroll"><table class="data-table">
       <caption class="sr-only">Detection scores for the baseline single lead detector and the ensemble detector</caption>
       <thead><tr><th scope="col">Detector</th><th scope="col">Detections</th><th scope="col">TP</th><th scope="col">FP</th><th scope="col">FN</th><th scope="col">Sensitivity</th><th scope="col">Precision</th><th scope="col">F1</th><th scope="col">RMSE (ms)</th></tr></thead>
@@ -302,10 +291,7 @@
 
 <!-- ============================= EXPORT ============================= -->
 <section id="panel-export" role="tabpanel" aria-labelledby="tab-export" class="panel" hidden>
-  <div class="panel-intro">
-    <h2>WFDB export</h2>
-    <p>Export the current record as PhysioNet WFDB compatible text: a <code>.hea</code> header, a CSV signal table and a <code>.qrs</code> annotation list. All files are generated locally in the browser.</p>
-  </div>
+  <h2 class="panel-title">WFDB export</h2>
   <div class="card">
     <div class="card-head"><h3>Record preview</h3><span id="export-state" class="pill">no record</span></div>
     <div class="export-grid">
@@ -348,17 +334,14 @@
       <button type="button" id="download-svg" class="btn" disabled>Download strip .svg</button>
       <button type="button" id="print-strip" class="btn" disabled>Print strip</button>
     </div>
-    <div class="strip-preview-wrap"><img id="strip-preview" class="strip-img" alt="Printable pink-grid ECG strip preview" hidden></div>
+    <div class="strip-preview-wrap"><img id="strip-preview" class="strip-img" src="data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'/%3E" alt="Printable pink-grid ECG strip preview" hidden></div>
     <pre id="report-preview" class="code-preview" aria-label="JSON report preview" tabindex="0">Build clinical files to see the report preview.</pre>
   </div>
 </section>
 
 <!-- ============================= DOCS ============================= -->
 <section id="panel-docs" role="tabpanel" aria-labelledby="tab-docs" class="panel" hidden>
-  <div class="panel-intro">
-    <h2>Documentation</h2>
-    <p>How the engine works, what each module does, and how to run the verification suite.</p>
-  </div>
+  <h2 class="panel-title">Documentation</h2>
   <div class="docs-grid">
     <div class="card"><h3>Engine modules</h3>
       <dl class="doc-list">

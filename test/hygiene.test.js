@@ -86,7 +86,7 @@ test('no smooth scrolling anywhere', () => {
 test('the title stands alone: no tagline or kicker copy', () => {
   const html = read('index.html');
   assert.ok(/<h1[^>]*>/.test(html));
-  assert.doesNotMatch(html, /class=["'][^"']*(tagline|subtitle|kicker|eyebrow|lede|panel-tag)/i);
+  assert.doesNotMatch(html, /class=["'][^"']*(tagline|subtitle|kicker|eyebrow|lede|panel-tag|panel-intro)/i);
 });
 
 test('synthetic-only and not-a-medical-device disclaimers are present', () => {

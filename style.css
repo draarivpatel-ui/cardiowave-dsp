@@ -110,8 +110,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 1.25rem clamp(.8rem, 3vw, 2re
   }
 }
 
-.panel-intro { margin-bottom: 1.1rem; }
-.panel-intro p { color: var(--muted); max-width: 78ch; }
+.panel-title { margin-bottom: 1.1rem; }
 
 .controls {
   display: grid; gap: .8rem;
@@ -150,12 +149,12 @@ select, input[type="text"] {
 .hint { color: var(--muted); font-size: .78rem; margin: 0; flex: 1 1 260px; }
 
 .status {
-  border-left: 3px solid var(--accent-2); background: var(--panel);
-  padding: .65rem .9rem; border-radius: 0 8px 8px 0; font-size: .85rem; margin-bottom: 1rem;
+  border: 1px solid rgba(111, 168, 255, .35); background: var(--panel);
+  padding: .65rem .9rem; border-radius: 8px; font-size: .85rem; margin-bottom: 1rem;
   overflow-wrap: anywhere;
 }
-.status[data-kind="warn"] { border-left-color: var(--warn); }
-.status[data-kind="error"] { border-left-color: var(--danger); }
+.status[data-kind="warn"] { border-color: rgba(255, 181, 71, .55); background: rgba(255, 181, 71, .09); }
+.status[data-kind="error"] { border-color: rgba(255, 122, 122, .55); background: rgba(255, 122, 122, .09); }
 
 .stat-grid { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1rem; }
 .stat {
@@ -268,11 +267,17 @@ canvas { display: block; width: 100%; max-width: 100%; height: auto; touch-actio
   :root {
     --bg: #f4f7fc; --bg-soft: #e9eff8; --panel: #ffffff; --panel-2: #f0f5fc;
     --line: #cbd9ec; --text: #13233b; --muted: #52657f; --shadow: 0 6px 20px rgba(24, 52, 92, .1);
+    --accent: #00766d; --accent-2: #245fbf; --warn: #8a5200; --danger: #c23535; --good: #237a45;
+    --signal: #00766d; --detect: #8a5200; --truth: #c23364; --ellipse: #744cc9; --poincare: #245fbf;
   }
   body { background: var(--bg); }
   .site-header { background: rgba(255, 255, 255, .8); }
   .canvas-wrap { background: #fbfdff; border-color: var(--line); }
   .code-preview { background: #f6f9fe; color: #1b2c47; }
   .disclaimer { background: #fff5e3; color: #6a4a13; }
-  .pill-accent, .btn-primary, .tab[aria-selected="true"] { color: #05201d; }
+  .pill-accent, .btn-primary, .tab[aria-selected="true"] { color: #ffffff; }
+  .btn-primary:hover:not(:disabled) { background: #006c64; }
+  .btn:hover:not(:disabled) { background: #dce9f8; }
+  .status[data-kind="warn"] { background: #fff7e8; }
+  .status[data-kind="error"] { background: #fff0f0; }
 }
