@@ -211,7 +211,7 @@ canvas { display: block; width: 100%; max-width: 100%; height: auto; touch-actio
 
 /* ---- Rhythm card and live Poincare ---- */
 .poincare-controls { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: center; margin-bottom: .7rem; }
-.check-label { display: inline-flex; align-items: center; gap: .45rem; font-size: .82rem; color: var(--muted); margin: 0; }
+.check-label { display: inline-flex; align-items: center; gap: .45rem; min-height: 24px; font-size: .82rem; color: var(--muted); margin: 0; }
 .check-label input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
 .stat-grid-mini { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
 .stat-grid-mini .stat-value { font-size: 1rem; }
@@ -231,8 +231,9 @@ canvas { display: block; width: 100%; max-width: 100%; height: auto; touch-actio
 .strip-img { display: block; width: 100%; height: auto; }
 #print-area { display: none; }
 @media print {
+  body.print-mode { background: #fff !important; color: #111 !important; }
   body.print-mode > *:not(#print-area) { display: none; }
-  body.print-mode #print-area { display: block; }
+  body.print-mode #print-area { display: block; background: #fff; }
   body.print-mode #print-area img { display: block; width: 100%; height: auto; }
 }
 

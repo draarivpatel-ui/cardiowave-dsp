@@ -152,3 +152,7 @@ test('live regions and the alert role announce status changes', () => {
   const html = read('index.html');
   assert.ok((html.match(/aria-live/g) || []).length >= 2);
 });
+test('print strip area is a direct body child outside main', () => {
+  const html = read('index.html');
+  assert.match(html, /<\/main>\s*<div id="print-area" aria-hidden="true"><\/div>\s*<footer/);
+});

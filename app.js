@@ -1125,12 +1125,14 @@
       }
       state.printRequested = true;
       var off = function () {
+        state.printTimer = null;
         if (d.body && d.body.classList) d.body.classList.remove('print-mode');
       };
+      if (state.printTimer && w.clearTimeout) w.clearTimeout(state.printTimer);
       if (d.body && d.body.classList) d.body.classList.add('print-mode');
       if (w.addEventListener) w.addEventListener('afterprint', off);
       if (w.print) w.print();
-      if (w.setTimeout) w.setTimeout(off, 1500); else off();
+      if (w.setTimeout) state.printTimer = w.setTimeout(off, 5000); else off();
     }
 
     /* Apply '#key=value&key=value' pairs to the generator controls.
