@@ -16,7 +16,7 @@ npm test
 node --test test/*.test.js
 ```
 
-Node 18 or newer is required for `node --test`. The browser needs no specific Node version. The suite is verified at 344 passing tests, 0 failures, and `npm run audit` runs a headless Chromium audit at 1440x900 and 390x844 that reports zero console errors, zero uncaught page errors, zero external network requests and zero horizontal overflow.
+Node 18 or newer is required for `node --test`. The browser needs no specific Node version. The suite is verified at 345 passing tests, 0 failures, and `npm run audit` runs a headless Chromium audit at 1440x900 and 390x844 that reports zero console errors, zero uncaught page errors, zero external network requests and zero horizontal overflow.
 
 ## What is inside
 
